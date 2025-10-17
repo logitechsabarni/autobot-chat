@@ -1,99 +1,60 @@
 import streamlit as st
-import openai
-import PyPDF2
-import requests
-import io
-import pyttsx3
-from gtts import gTTS
-import speech_recognition as sr
+from openai import OpenAI
 
-# -------------------------
-# 🔑 OpenAI API Key
-# -------------------------
-openai.api_key = st.secrets["OPENAI_API_KEY"]  # Store your key in Streamlit Secrets
+# Initialize OpenAI client using Streamlit Secrets
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# -------------------------
-# Streamlit UI
-# -------------------------
-st.title("🤖 AutoBot - Your Unified AI Assistant")
+# Streamlit page config
+st.set_page_config(page_title="🤖 AutoBot Chat Assistant", page_icon="💬")
 
-st.sidebar.header("Upload Files or Speak")
-uploaded_file = st.sidebar.file_uploader("Upload PDF", type=["pdf"])
-voice_input = st.sidebar.button("Speak")
+# App title and description
+st.title("🤖 AutoBot Chat Assistant")
+st.write("Welcome! I'm AutoBot — your AI-powered assistant ready to help you automate tasks, schedule events, and manage reminders!")
 
-# Text input
-user_input = st.text_input("Type your message to AutoBot:")
+# Initialize chat history
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {"role": "system", "content": "You are AutoBot, an intelligent assistant that helps users with task automation, scheduling, and reminders."}
+    ]
 
-# -------------------------
-# Function: OpenAI Chat
-# -------------------------
-def chat_with_autobot(message):
-    response = openai.ChatCompletion.create(
-        model="gpt-4-turbo",
-        messages=[
-            {"role": "system", "content": "You are AutoBot, an intelligent personal assistant that automates scheduling, reminders, payments, and more."},
-            {"role": "user", "content": message}
-        ]
-    )
-    return response.choices[0].message["content"]
+# Sidebar info
+with st.sidebar:
+    st.header("⚙️ App Settings")
+    st.write("Built using **Streamlit** and **OpenAI GPT-4 Turbo**.")
+    st.markdown("---")
+    st.write("💡 Tip: Try asking me things like:")
+    st.markdown("""
+    - "Schedule a meeting with John at 5 PM tomorrow"
+    - "Remind me to pay my electricity bill on Monday"
+    - "Summarize my tasks for the week"
+    """)
+    st.markdown("---")
+    st.write("Made by **Sabarni Guha** 🔥")
 
-# -------------------------
-# Function: Read PDF
-# -------------------------
-def read_pdf(file):
-    pdf_reader = PyPDF2.PdfReader(file)
-    text = ""
-    for page in pdf_reader.pages:
-        text += page.extract_text()
-    return text
+# Display chat messages
+for msg in st.session_state.messages[1:]:
+    if msg["role"] == "user":
+        st.chat_message("user").markdown(msg["content"])
+    else:
+        st.chat_message("assistant").markdown(msg["content"])
 
-# -------------------------
-# Function: TTS
-# -------------------------
-def speak_text(text):
-    try:
-        # Use pyttsx3 (offline)
-        engine = pyttsx3.init()
-        engine.say(text)
-        engine.runAndWait()
-    except:
-        # Fallback: gTTS (online)
-        tts = gTTS(text=text, lang='en')
-        tts.save("output.mp3")
-        st.audio("output.mp3")
+# User input
+user_input = st.chat_input("Type your message here...")
 
-# -------------------------
-# Function: Speech Recognition
-# -------------------------
-def get_voice_input():
-    recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.info("Listening...")
-        audio = recognizer.listen(source, phrase_time_limit=5)
-    try:
-        return recognizer.recognize_google(audio)
-    except:
-        return ""
+# Handle user input
+if user_input:
+    # Display user message
+    st.chat_message("user").markdown(user_input)
+    st.session_state.messages.append({"role": "user", "content": user_input})
 
-# -------------------------
-# Handle Voice Input
-# -------------------------
-if voice_input:
-    user_input = get_voice_input()
-    st.write(f"🎙 You said: {user_input}")
+    # Get model reply
+    with st.spinner("AutoBot is thinking... 🤔"):
+        response = client.chat.completions.create(
+            model="gpt-4-turbo",
+            messages=st.session_state.messages
+        )
+        reply = response.choices[0].message.content
 
-# -------------------------
-# Handle PDF Input
-# -------------------------
-if uploaded_file:
-    pdf_text = read_pdf(uploaded_file)
-    st.text_area("PDF Content", pdf_text, height=200)
-    user_input += "\n" + pdf_text  # Append PDF content to message
-
-# -------------------------
-# Handle Chat Submission
-# -------------------------
-if st.button("Send") and user_input:
-    reply = chat_with_autobot(user_input)
-    st.write(f"🤖 AutoBot: {reply}")
-    speak_text(reply)
+    # Display assistant message
+    st.chat_message("assistant").markdown(reply)
+    st.session_state.messages.append({"role": "assistant", "content": reply})
