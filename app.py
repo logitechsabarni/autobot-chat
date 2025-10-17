@@ -1,107 +1,99 @@
 import streamlit as st
 import openai
-import os
-from PyPDF2 import PdfReader
+import PyPDF2
+import requests
+import io
+import pyttsx3
 from gtts import gTTS
-import playsound
-import tempfile
 import speech_recognition as sr
-from datetime import datetime
 
-# -------------------------------
-# OpenAI API key (from Streamlit secrets)
-# -------------------------------
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+# -------------------------
+# 🔑 OpenAI API Key
+# -------------------------
+openai.api_key = st.secrets["OPENAI_API_KEY"]  # Store your key in Streamlit Secrets
 
-st.title("🤖 AutoBot - Unified AI Assistant")
+# -------------------------
+# Streamlit UI
+# -------------------------
+st.title("🤖 AutoBot - Your Unified AI Assistant")
 
-st.markdown("""
-**Features included:**  
-- AI Chatbot powered by GPT-4  
-- PDF Upload & Contextual Answers  
-- Voice Input / Output  
-- Stub Functions: Email/Calendar scheduling  
-""")
+st.sidebar.header("Upload Files or Speak")
+uploaded_file = st.sidebar.file_uploader("Upload PDF", type=["pdf"])
+voice_input = st.sidebar.button("Speak")
 
-# -------------------------------
-# PDF Upload
-# -------------------------------
-uploaded_file = st.file_uploader("Upload PDF for context (optional)", type=["pdf"])
-pdf_text = ""
-if uploaded_file:
-    reader = PdfReader(uploaded_file)
-    for page in reader.pages:
-        pdf_text += page.extract_text()
-    st.success("PDF loaded successfully!")
+# Text input
+user_input = st.text_input("Type your message to AutoBot:")
 
-# -------------------------------
-# Voice Input
-# -------------------------------
-voice_option = st.checkbox("Use voice input?")
-if voice_option:
-    st.write("Press 'Record' and speak")
-    if st.button("Record"):
-        r = sr.Recognizer()
-        with sr.Microphone() as source:
-            st.write("Listening...")
-            audio_data = r.listen(source, timeout=5)
-            try:
-                user_input = r.recognize_google(audio_data)
-                st.write("You said:", user_input)
-            except:
-                st.write("Could not recognize voice")
-                user_input = ""
-else:
-    user_input = st.text_input("Type your message here:")
-
-# -------------------------------
-# Send Button
-# -------------------------------
-if st.button("Send") and user_input.strip() != "":
-    # Prepare GPT prompt
-    prompt = ("You are AutoBot, an intelligent AI assistant that automates tasks, scheduling, "
-              "reminders, and emails. Answer in a helpful, concise, and polite way.")
-    if pdf_text:
-        prompt += f" Use the following PDF context to answer: {pdf_text}"
-
-    # Call GPT
+# -------------------------
+# Function: OpenAI Chat
+# -------------------------
+def chat_with_autobot(message):
     response = openai.ChatCompletion.create(
         model="gpt-4-turbo",
         messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": user_input}
+            {"role": "system", "content": "You are AutoBot, an intelligent personal assistant that automates scheduling, reminders, payments, and more."},
+            {"role": "user", "content": message}
         ]
     )
-    reply = response.choices[0].message.content
-    st.write("🤖 AutoBot:", reply)
+    return response.choices[0].message["content"]
 
-    # -------------------------------
-    # Voice Output
-    # -------------------------------
-    voice_out = st.checkbox("Read reply aloud")
-    if voice_out:
-        tts = gTTS(reply)
-        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-        tts.save(tmp_file.name)
-        playsound.playsound(tmp_file.name)
+# -------------------------
+# Function: Read PDF
+# -------------------------
+def read_pdf(file):
+    pdf_reader = PyPDF2.PdfReader(file)
+    text = ""
+    for page in pdf_reader.pages:
+        text += page.extract_text()
+    return text
 
-# -------------------------------
-# Email Scheduling Stub
-# -------------------------------
-st.markdown("### 📧 Email / Calendar Automation (Demo)")
-email_task = st.text_input("Type a task to schedule/send email (demo)")
-if st.button("Schedule Email / Task") and email_task.strip() != "":
-    # Stub function for hackathon demo
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    st.success(f"Task '{email_task}' scheduled successfully for {now} ✅")
+# -------------------------
+# Function: TTS
+# -------------------------
+def speak_text(text):
+    try:
+        # Use pyttsx3 (offline)
+        engine = pyttsx3.init()
+        engine.say(text)
+        engine.runAndWait()
+    except:
+        # Fallback: gTTS (online)
+        tts = gTTS(text=text, lang='en')
+        tts.save("output.mp3")
+        st.audio("output.mp3")
 
-# -------------------------------
-# Future Enhancements Placeholder
-# -------------------------------
-st.markdown("""
-**Future Enhancements:**  
-- Connect real Google Calendar API for scheduling  
-- Connect Gmail API for email automation  
-- Multi-user login & personalization  
-- Proactive alerts & reminders  
-""")
+# -------------------------
+# Function: Speech Recognition
+# -------------------------
+def get_voice_input():
+    recognizer = sr.Recognizer()
+    with sr.Microphone() as source:
+        st.info("Listening...")
+        audio = recognizer.listen(source, phrase_time_limit=5)
+    try:
+        return recognizer.recognize_google(audio)
+    except:
+        return ""
+
+# -------------------------
+# Handle Voice Input
+# -------------------------
+if voice_input:
+    user_input = get_voice_input()
+    st.write(f"🎙 You said: {user_input}")
+
+# -------------------------
+# Handle PDF Input
+# -------------------------
+if uploaded_file:
+    pdf_text = read_pdf(uploaded_file)
+    st.text_area("PDF Content", pdf_text, height=200)
+    user_input += "\n" + pdf_text  # Append PDF content to message
+
+# -------------------------
+# Handle Chat Submission
+# -------------------------
+if st.button("Send") and user_input:
+    reply = chat_with_autobot(user_input)
+    st.write(f"🤖 AutoBot: {reply}")
+    speak_text(reply)
