@@ -1,10 +1,21 @@
-streamlit
-openai
-PyPDF2
-SpeechRecognition
-gTTS
-playsound
-requests
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
+# Core
+streamlit==1.50.0
+
+# AI & Chat
+openai==2.4.0
+
+# PDF handling
+PyPDF2==3.0.1
+
+# Speech recognition
+SpeechRecognition==3.14.3
+
+# Text-to-Speech (TTS)
+gTTS==2.5.4
+pyttsx3==2.90
+
+# Optional: improved logging & UI
+rich==14.2.0
+markdown-it-py==4.0.0
+pygments==2.19.2
+mdurl==0.1.2
