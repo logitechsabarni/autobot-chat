@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AutoBot Chat</title>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-functions.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-analytics.js"></script>
+
+  <script>
+    // Your Firebase config (from console)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCbbfdeZKqeHYgoC-AReGH0hIKp0iSvVLM",
+      authDomain: "autobot-aa1b1.firebaseapp.com",
+      projectId: "autobot-aa1b1",
+      storageBucket: "autobot-aa1b1.firebasestorage.app",
+      messagingSenderId: "586825870245",
+      appId: "1:586825870245:web:d71b28979bf52b22b0964c",
+      measurementId: "G-50ZS5BEL6Q"
+    };
+
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const analytics = firebase.analytics();
+    const functions = firebase.functions();
+
+    // Function to send a message to AutoBot
+    async function sendMessage() {
+      const input = document.getElementById("msg").value;
+      const chatWithAutoBot = functions.httpsCallable("chatWithAutoBot");
+      const result = await chatWithAutoBot({ message: input });
+      document.getElementById("reply").innerText = "AutoBot: " + result.data.reply;
+    }
+  </script>
+</head>
+<body style="font-family: Arial; text-align: center; margin-top: 100px;">
+  <h2>🤖 AutoBot Chat Assistant</h2>
+  <input id="msg" placeholder="Type your message..." size="40">
+  <button onclick="sendMessage()">Send</button>
+  <p id="reply"></p>
+</body>
+</html>
