@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import time
 
 # --------------------------
-# Function to create dummy images
+# Helper functions
 # --------------------------
 def create_dummy_image(color, size=(100, 100), text=None):
     img = Image.new("RGB", size, color)
@@ -14,8 +14,20 @@ def create_dummy_image(color, size=(100, 100), text=None):
         draw.text((10, 40), text, fill="white")
     return img
 
+def show_notification(message, kind="info", duration=2):
+    """Show a temporary pop-up notification at top"""
+    notification = st.empty()
+    if kind == "info":
+        notification.info(f"🔔 {message}")
+    elif kind == "warning":
+        notification.warning(f"⚠️ {message}")
+    elif kind == "success":
+        notification.success(f"✅ {message}")
+    time.sleep(duration)
+    notification.empty()
+
 # --------------------------
-# Create dummy images
+# Dummy images
 # --------------------------
 user_img = create_dummy_image((255, 200, 150), text="User")
 task_img = create_dummy_image((100, 200, 255), text="Task")
@@ -40,9 +52,9 @@ if "tasks" not in st.session_state:
 
 if "payments" not in st.session_state:
     st.session_state.payments = [
-        {"name": "Electricity Bill", "amount": "$50", "due": "2025-10-18"},
-        {"name": "Internet Bill", "amount": "$30", "due": "2025-10-20"},
-        {"name": "Netflix Subscription", "amount": "$15", "due": "2025-10-19"},
+        {"name": "Electricity Bill", "amount": "$50", "due": "2025-10-18", "status": "Pending"},
+        {"name": "Internet Bill", "amount": "$30", "due": "2025-10-20", "status": "Pending"},
+        {"name": "Netflix Subscription", "amount": "$15", "due": "2025-10-19", "status": "Pending"},
     ]
 
 if "dummy_responses" not in st.session_state:
@@ -80,25 +92,15 @@ if "dummy_responses" not in st.session_state:
     ]
 
 # --------------------------
-# Sidebar: User Profile
+# Sidebar
 # --------------------------
 st.sidebar.markdown("### 👤 User Profile")
 st.sidebar.image(user_img, width=100)
-completed_tasks = sum([len(v) for v in st.session_state.tasks.values()]) - 5  # dummy metric
+completed_tasks = sum([len(v) for v in st.session_state.tasks.values()]) - 5
+upcoming_tasks = 5
 st.sidebar.write(f"**Tasks Completed:** {completed_tasks} / 15")
-upcoming_tasks = 5  # dummy
 st.sidebar.write(f"**Upcoming Tasks:** {upcoming_tasks}")
 st.sidebar.write("**Next Reminder:** 2025-10-18 10:00 AM")
-st.sidebar.markdown("---")
-
-# --------------------------
-# Sidebar: Quick Links
-# --------------------------
-st.sidebar.markdown("### 📌 Quick Links")
-st.sidebar.button("View Calendar")
-st.sidebar.button("View Tasks")
-st.sidebar.button("Payments")
-st.sidebar.button("View Reminders")
 st.sidebar.markdown("---")
 
 # --------------------------
@@ -117,68 +119,84 @@ col2.metric("Upcoming Tasks", f"{upcoming_tasks}", "-1 from yesterday")
 col3.metric("Reminders Today", "3", "+1 from yesterday")
 
 # --------------------------
+# Top Icons: Calendar, Payments
+# --------------------------
+st.subheader("🔹 Quick Access")
+icon_col1, icon_col2 = st.columns(2)
+with icon_col1:
+    if st.button("📅 Calendar"):
+        st.session_state.show_calendar = True
+with icon_col2:
+    if st.button("💰 Payments"):
+        st.session_state.show_payments = True
+
+# --------------------------
 # Calendar Section
 # --------------------------
-st.subheader("📅 Calendar")
-dates = list(st.session_state.tasks.keys())
-selected_date = st.selectbox("Select a date", dates)
-st.write("### Tasks for", selected_date)
-for task in st.session_state.tasks[selected_date]:
-    st.checkbox(task)
+if "show_calendar" not in st.session_state:
+    st.session_state.show_calendar = False
 
-new_task = st.text_input("Add a new task")
-if st.button("Add Task"):
-    if selected_date in st.session_state.tasks:
-        st.session_state.tasks[selected_date].append(new_task)
-    else:
-        st.session_state.tasks[selected_date] = [new_task]
-    st.success(f"Task '{new_task}' added to {selected_date}!")
-    # Pop-up style notification
-    notification = st.empty()
-    notification.info(f"🔔 New Task Added: '{new_task}' on {selected_date}")
-    time.sleep(2)
-    notification.empty()
+if st.session_state.show_calendar:
+    st.subheader("📅 Calendar & Tasks")
+    selected_date = st.date_input("Select date", datetime.now())
+    selected_date_str = selected_date.strftime("%Y-%m-%d")
+    tasks_for_date = st.session_state.tasks.get(selected_date_str, [])
+    st.write(f"### Tasks for {selected_date_str}")
+    for task in tasks_for_date:
+        st.checkbox(task)
+    new_task = st.text_input("Add new task", key=f"task_{selected_date_str}")
+    if st.button("Add Task to Calendar"):
+        st.session_state.tasks.setdefault(selected_date_str, []).append(new_task)
+        show_notification(f"New task '{new_task}' added for {selected_date_str}", "success")
+
+# --------------------------
+# Payments Section
+# --------------------------
+if "show_payments" not in st.session_state:
+    st.session_state.show_payments = False
+
+if st.session_state.show_payments:
+    st.subheader("💰 Payments")
+    today = datetime.now().date()
+    for p in st.session_state.payments:
+        status = p["status"]
+        due_date = datetime.strptime(p["due"], "%Y-%m-%d").date()
+        st.write(f"- **{p['name']}** | Amount: {p['amount']} | Due: {p['due']} | Status: {status}")
+        if status == "Pending" and due_date <= today:
+            show_notification(f"Payment '{p['name']}' of {p['amount']} is due!", "warning")
+    # Add payment
+    new_payment_name = st.text_input("Payment Name", key="payment_name")
+    new_payment_amount = st.text_input("Amount", key="payment_amount")
+    new_payment_due = st.date_input("Due Date", key="payment_due")
+    if st.button("Add Payment"):
+        st.session_state.payments.append({
+            "name": new_payment_name,
+            "amount": new_payment_amount,
+            "due": new_payment_due.strftime("%Y-%m-%d"),
+            "status": "Pending"
+        })
+        show_notification(f"Payment '{new_payment_name}' scheduled for {new_payment_due}", "success")
 
 # --------------------------
 # Reminders Section
 # --------------------------
 st.subheader("⏰ Reminders")
-reminder_date = st.date_input("Select reminder date", datetime.now())
-reminder_msg = st.text_input("Enter reminder message", key="reminder_input")
+reminder_date = st.date_input("Select reminder date", datetime.now(), key="reminder_date")
+reminder_msg = st.text_input("Enter reminder message", key="reminder_msg")
 if st.button("Add Reminder"):
-    st.success(f"Reminder set for {reminder_date}: {reminder_msg}")
-    # Pop-up style notification
-    notification = st.empty()
-    notification.info(f"🔔 Reminder: '{reminder_msg}' scheduled on {reminder_date}")
-    time.sleep(2)
-    notification.empty()
+    show_notification(f"Reminder set: '{reminder_msg}' on {reminder_date}", "info")
 
 # --------------------------
-# Chat Section (Dummy Responses)
+# Dummy Chat Section
 # --------------------------
 st.subheader("💬 Chat with AutoBot (Dummy Responses)")
-user_input = st.text_input("Type your message", key="chat_input")
+user_input = st.text_input("Type your message", key="chat_input2")
 if st.button("Send Message"):
     response = random.choice(st.session_state.dummy_responses)
     st.markdown(f"**AutoBot:** {response}")
 
 # --------------------------
-# Payment Section
-# --------------------------
-st.subheader("💰 Payments")
-st.image(payment_img, width=80)
-st.write("Upcoming payments (dummy data):")
-for p in st.session_state.payments:
-    st.write(f"- **{p['name']}** | Amount: {p['amount']} | Due: {p['due']}")
-    # Pop-up notification if payment due today
-    if datetime.now().date() == datetime.strptime(p['due'], "%Y-%m-%d").date():
-        notification = st.empty()
-        notification.warning(f"🔔 Payment Reminder: {p['name']} of {p['amount']} is due today!")
-        time.sleep(2)
-        notification.empty()
-
-# --------------------------
-# End of App
+# Footer
 # --------------------------
 st.write("---")
 st.write("Made with ❤️ by Sabarni Guha")
