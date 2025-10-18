@@ -113,29 +113,68 @@ with st.expander("➕ Add a new payment"):
         st.session_state.notifications.append(f"💰 New Payment Added: {pay_name} due on {pay_due.strftime('%Y-%m-%d')}")
 
 # ------------------------------
-# Hackathon Chat Section (Claude-style responses)
+# Hackathon Chat Section (Dynamic Claude-style responses with context)
 # ------------------------------
 st.subheader("💬 Chat with AutoBot")
 
-# Pre-generated Claude-style responses
-claude_responses = [
-    "Meeting with John scheduled for tomorrow at 3 PM ✅",
-    "Reminder set: Pay electricity bill on Friday ⏰",
-    "Task 'Finish project report' marked complete! 🎉",
-    "Your Netflix payment of ₹499 is due in 2 days 💰",
-    "You have 2 upcoming deadlines tomorrow. Stay on track! 🕒",
-    "AutoBot: Keep your tasks organized and productive! ✅",
-    "New task 'Client follow-up' added successfully for tomorrow 🗓️",
-    "Payment for Internet Bill marked as completed 💳",
-    "Pro Tip: Finish your toughest task first for better focus 💡",
-    "AutoBot: Your calendar looks clear for the weekend 🌟"
-]
+# Keyword-based responses referencing actual tasks/payments
+claude_responses_map = {
+    "schedule": [
+        f"Meeting scheduled! Your tasks for {selected_date_str}: {tasks}" if tasks else "Meeting scheduled! Your calendar is free.",
+        "Your new meeting is on the calendar 📅",
+        "Scheduled successfully! Don’t forget to check your agenda 🗓️"
+    ],
+    "remind": [
+        f"Reminder set! Pending payments: {[p['name'] for p in st.session_state.payments if not p['paid']]}",
+        "Got it! I will remind you at the scheduled time ⏰",
+        "Reminder confirmed! You won't forget this task ✅"
+    ],
+    "payment": [
+        f"Payment info: {[p['name']+' ('+p['amount']+')' for p in st.session_state.payments]}",
+        "Payment scheduled successfully 💳",
+        "Payment recorded in your dashboard ✅"
+    ],
+    "task": [
+        f"Task list updated for {selected_date_str}: {tasks}" if tasks else "No tasks yet, but new task added ✅",
+        "New task added to your list 📝",
+        "Task logged successfully! Stay productive 💪"
+    ],
+    "default": [
+        "Got it! Task recorded. ✅",
+        "Understood! Logged successfully 🗒️",
+        "Noted! I’ll keep track of this 📝",
+        "Okay! Added to your dashboard 📌",
+        "Copy that! Everything is on track ✅",
+        "Message received! You’re all set 🌟",
+        "Sure! I’ve noted it down 🗒️",
+        "Done! Your instructions are saved ✅",
+        "Acknowledged! Your dashboard is updated 📅",
+        "All set! Keep going 💪",
+        "Noted! Don’t forget to check your tasks 🕒",
+        "All caught! You’re on track 🌟",
+        "Recorded! AutoBot has got your back 🤖",
+        "Logged successfully! Keep it up ✅",
+        "Understood! Reminder added ⏰",
+        "Noted! Task and reminders updated 📝",
+        "Great! Your schedule looks updated 📅",
+        "Confirmed! All actions recorded ✅",
+        "Message noted! Continue with your day 💡",
+        "Acknowledged! Dashboard updated 🗒️"
+    ]
+}
 
 user_msg = st.text_input("Type your message here")
 if st.button("Send"):
     if user_msg.strip() != "":
-        # Pick a Claude-style response
-        bot_response = random.choice(claude_responses)
+        user_lower = user_msg.lower()
+        bot_response = random.choice(claude_responses_map["default"])  # default response
+
+        # Match keyword and pick realistic response
+        for key, resp_list in claude_responses_map.items():
+            if key in user_lower:
+                bot_response = random.choice(resp_list)
+                break
+
         st.markdown(f"**AutoBot:** {bot_response}")
         st.session_state.notifications.append(f"💬 AutoBot says: {bot_response}")
     else:
@@ -146,7 +185,7 @@ if st.button("Send"):
 # ------------------------------
 st.subheader("🔔 Notifications")
 if st.session_state.notifications:
-    for note in st.session_state.notifications[-6:]:
+    for note in st.session_state.notifications[-6:]:  # show latest 6
         st.info(note)
 else:
     st.write("No notifications yet.")
