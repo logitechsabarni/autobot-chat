@@ -1,4 +1,4 @@
-# Core
+#Core
 streamlit==1.50.0
 
 # AI & Chat
