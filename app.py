@@ -34,7 +34,6 @@ st.sidebar.markdown("**Name:** Sabarni Guha")
 st.sidebar.markdown("**Role:** User")
 st.sidebar.markdown("---")
 
-# Compute stats
 today = datetime.today().date()
 tasks_completed = sum(
     1 for date, task_list in st.session_state.tasks.items()
@@ -46,7 +45,6 @@ upcoming_tasks = sum(
 )
 pending_payments = sum(1 for p in st.session_state.payments if not p["paid"])
 
-# Sidebar Info
 st.sidebar.write(f"✅ **Tasks Completed:** {tasks_completed}")
 st.sidebar.write(f"🕒 **Upcoming Tasks:** {upcoming_tasks}")
 st.sidebar.write(f"💰 **Pending Payments:** {pending_payments}")
@@ -75,7 +73,6 @@ if tasks:
 else:
     st.info("No tasks scheduled for this date.")
 
-# Add a new task
 new_task = st.text_input("Add a new task")
 if st.button("➕ Add Task"):
     if selected_date_str in st.session_state.tasks:
@@ -101,7 +98,6 @@ for idx, payment in enumerate(st.session_state.payments):
         payment["paid"] = False
         st.session_state.notifications.append(f"⚠️ Payment marked as pending: {payment['name']}")
 
-# Add new payment
 with st.expander("➕ Add a new payment"):
     pay_name = st.text_input("Payment Name")
     pay_amount = st.text_input("Amount (e.g., ₹500)")
@@ -117,37 +113,40 @@ with st.expander("➕ Add a new payment"):
         st.session_state.notifications.append(f"💰 New Payment Added: {pay_name} due on {pay_due.strftime('%Y-%m-%d')}")
 
 # ------------------------------
-# Dummy Chat Section
+# Hackathon Chat Section (Claude-style responses)
 # ------------------------------
 st.subheader("💬 Chat with AutoBot")
 
-dummy_responses = [
-    "Your payment for Netflix is due soon!",
-    "Great work completing your tasks today!",
-    "You have 2 upcoming deadlines tomorrow.",
-    "Remember to pay your electricity bill on time.",
-    "Your tasks are on track — keep it up!",
-    "Don’t forget to schedule your next project review.",
-    "Payment reminder: Internet bill due this week.",
-    "Task completed successfully! 🎉",
-    "AutoBot: Stay productive and focused!",
-    "Your calendar looks clear for the weekend.",
-    "💡 Pro Tip: Try finishing your toughest task first.",
+# Pre-generated Claude-style responses
+claude_responses = [
+    "Meeting with John scheduled for tomorrow at 3 PM ✅",
+    "Reminder set: Pay electricity bill on Friday ⏰",
+    "Task 'Finish project report' marked complete! 🎉",
+    "Your Netflix payment of ₹499 is due in 2 days 💰",
+    "You have 2 upcoming deadlines tomorrow. Stay on track! 🕒",
+    "AutoBot: Keep your tasks organized and productive! ✅",
+    "New task 'Client follow-up' added successfully for tomorrow 🗓️",
+    "Payment for Internet Bill marked as completed 💳",
+    "Pro Tip: Finish your toughest task first for better focus 💡",
+    "AutoBot: Your calendar looks clear for the weekend 🌟"
 ]
 
 user_msg = st.text_input("Type your message here")
 if st.button("Send"):
-    bot_response = random.choice(dummy_responses)
-    st.markdown(f"**AutoBot:** {bot_response}")
-    st.session_state.notifications.append(f"💬 AutoBot says: {bot_response}")
+    if user_msg.strip() != "":
+        # Pick a Claude-style response
+        bot_response = random.choice(claude_responses)
+        st.markdown(f"**AutoBot:** {bot_response}")
+        st.session_state.notifications.append(f"💬 AutoBot says: {bot_response}")
+    else:
+        st.warning("Please type a message first!")
 
 # ------------------------------
 # Notifications Section
 # ------------------------------
 st.subheader("🔔 Notifications")
 if st.session_state.notifications:
-    for note in st.session_state.notifications[-6:]:  # show latest 6
+    for note in st.session_state.notifications[-6:]:
         st.info(note)
 else:
     st.write("No notifications yet.")
-
