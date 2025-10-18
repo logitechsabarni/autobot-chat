@@ -1,5 +1,4 @@
 import streamlit as st
-from streamlit import session_state as state
 from PIL import Image, ImageDraw
 import random
 from datetime import datetime, timedelta
@@ -30,36 +29,56 @@ st.set_page_config(page_title="AutoBot Dashboard", page_icon="💬", layout="wid
 # --------------------------
 # Initialize session state
 # --------------------------
-if "tasks" not in state:
-    state.tasks = {
+if "tasks" not in st.session_state:
+    st.session_state.tasks = {
         (datetime.today()).strftime("%Y-%m-%d"): ["Sample task 1", "Sample task 2"]
     }
-if "payments" not in state:
-    state.payments = [
-        {"name": "Electricity Bill", "amount": "$50", "due": (datetime.today()).strftime("%Y-%m-%d")},
-        {"name": "Internet Bill", "amount": "$30", "due": (datetime.today() + timedelta(days=2)).strftime("%Y-%m-%d")},
+if "payments" not in st.session_state:
+    st.session_state.payments = [
+        {"name": "Electricity Bill", "amount": "$50", "due": (datetime.today()).strftime("%Y-%m-%d"), "paid": False},
+        {"name": "Internet Bill", "amount": "$30", "due": (datetime.today() + timedelta(days=2)).strftime("%Y-%m-%d"), "paid": False},
     ]
-if "notifications" not in state:
-    state.notifications = []
+if "notifications" not in st.session_state:
+    st.session_state.notifications = []
 
 # --------------------------
-# Sidebar: User Profile
+# Sidebar: User Profile (Dynamic)
 # --------------------------
 st.sidebar.markdown("### 👤 User Profile")
 st.sidebar.image(user_img, width=100)
 st.sidebar.write("**Username:** Sabarni Guha")
+
+today = datetime.today().date()
+tasks_completed = sum(
+    1 for date, tasks in st.session_state.tasks.items()
+    if datetime.strptime(date, "%Y-%m-%d").date() < today
+)
+upcoming_tasks = sum(
+    len(tasks) for date, tasks in st.session_state.tasks.items()
+    if datetime.strptime(date, "%Y-%m-%d").date() >= today
+)
+reminders_today = len([n for n in st.session_state.notifications if "today" in n.lower()])
+
+# Dynamic payment status
+pending_payments = sum(1 for p in st.session_state.payments if not p["paid"])
+st.sidebar.write(f"**Tasks Completed:** {tasks_completed}")
+st.sidebar.write(f"**Upcoming Tasks:** {upcoming_tasks}")
+st.sidebar.write(f"**Reminders Today:** {reminders_today}")
+st.sidebar.write(f"**Pending Payments:** {pending_payments}")
+
+# Next reminder (tasks or payments)
+future_notifications = [n for n in st.session_state.notifications if "today" not in n.lower()]
+next_reminder = future_notifications[0] if future_notifications else "No upcoming reminders"
+st.sidebar.write(f"**Next Reminder:** {next_reminder}")
 st.sidebar.markdown("---")
 
 # --------------------------
 # Sidebar: Quick Links
 # --------------------------
 st.sidebar.markdown("### 📌 Quick Links")
-if st.sidebar.button("View Calendar"):
-    st.info("Select a date below to schedule tasks.")
-if st.sidebar.button("View Tasks"):
-    st.info("Check tasks for selected date below.")
-if st.sidebar.button("Payments"):
-    st.info("Check upcoming payments below.")
+st.sidebar.button("View Calendar")
+st.sidebar.button("View Tasks")
+st.sidebar.button("Payments")
 st.sidebar.markdown("---")
 
 # --------------------------
@@ -75,47 +94,35 @@ st.subheader("📅 Schedule / View Tasks")
 selected_date = st.date_input("Select a date", datetime.today())
 selected_date_str = selected_date.strftime("%Y-%m-%d")
 
-# Show tasks for the selected date
-tasks_for_date = state.tasks.get(selected_date_str, [])
+tasks_for_date = st.session_state.tasks.get(selected_date_str, [])
 st.write(f"### Tasks for {selected_date_str}")
 for idx, task in enumerate(tasks_for_date):
     checked = st.checkbox(task, key=f"{selected_date_str}_{idx}")
     if checked:
-        state.notifications.append(f"Task '{task}' completed today!")
+        st.session_state.notifications.append(f"Task '{task}' completed today!")
 
 # Add new task
 new_task = st.text_input("Add a new task")
 if st.button("Add Task"):
-    if selected_date_str in state.tasks:
-        state.tasks[selected_date_str].append(new_task)
+    if selected_date_str in st.session_state.tasks:
+        st.session_state.tasks[selected_date_str].append(new_task)
     else:
-        state.tasks[selected_date_str] = [new_task]
+        st.session_state.tasks[selected_date_str] = [new_task]
     st.success(f"Task '{new_task}' added to {selected_date_str}!")
 
 # --------------------------
-# Payments Section
+# Payments Section (Dynamic)
 # --------------------------
 st.subheader("💰 Payments")
-for idx, p in enumerate(state.payments):
-    paid = st.checkbox(f"{p['name']} | Amount: {p['amount']} | Due: {p['due']}", key=f"pay_{idx}")
-    if paid:
-        state.notifications.append(f"Payment '{p['name']}' marked as paid!")
-
-# --------------------------
-# Task Overview Cards (Dynamic)
-# --------------------------
-st.subheader("📊 Task Overview")
-today = datetime.today().date()
-tasks_completed = sum(1 for date, tasks in state.tasks.items() 
-                      if datetime.strptime(date, "%Y-%m-%d").date() < today)
-upcoming_tasks_count = sum(len(tasks) for date, tasks in state.tasks.items()
-                           if datetime.strptime(date, "%Y-%m-%d").date() >= today)
-reminders_today = len([n for n in state.notifications if "today" in n.lower()])
-
-col1, col2, col3 = st.columns(3)
-col1.metric("Tasks Completed", f"{tasks_completed}")
-col2.metric("Upcoming Tasks", upcoming_tasks_count)
-col3.metric("Reminders Today", reminders_today)
+for idx, p in enumerate(st.session_state.payments):
+    label = f"{p['name']} | Amount: {p['amount']} | Due: {p['due']}"
+    paid_checkbox = st.checkbox(label, key=f"pay_{idx}", value=p["paid"])
+    if paid_checkbox and not p["paid"]:
+        p["paid"] = True
+        st.session_state.notifications.append(f"Payment '{p['name']}' marked as PAID!")
+    elif not paid_checkbox and p["paid"]:
+        p["paid"] = False
+        st.session_state.notifications.append(f"Payment '{p['name']}' marked as UNPAID!")
 
 # --------------------------
 # Dummy Chat Section
@@ -147,19 +154,23 @@ dummy_responses = [
     "Upcoming payment is due soon.",
     "Review your project deadlines.",
     "Plan tasks for tomorrow evening.",
-    "Don't forget your daily stand-up meeting."
+    "Don't forget your daily stand-up meeting.",
+    "You have a new payment due: 'Gym Subscription'.",
+    "Check your weekly goals progress.",
+    "Time to update your task tracker.",
+    "Schedule focus sessions for tomorrow."
 ]
 
 user_input = st.text_input("Type your message")
 if st.button("Send Message"):
     response = random.choice(dummy_responses)
     st.markdown(f"**AutoBot:** {response}")
-    state.notifications.append(response)
+    st.session_state.notifications.append(response)
 
 # --------------------------
 # Notifications Section
 # --------------------------
 st.subheader("🔔 Notifications")
-if state.notifications:
-    for note in state.notifications[-5:]:  # show last 5 notifications
+if st.session_state.notifications:
+    for note in st.session_state.notifications[-5:]:  # last 5 notifications
         st.info(note)
