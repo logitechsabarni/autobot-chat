@@ -1033,7 +1033,14 @@ with tabs[8]:
     dl1, dl2, dl3 = st.columns(3)
     dl1.download_button("⬇ CSV", df_full.to_csv(index=False), "ai_arena.csv", "text/csv", use_container_width=True)
     dl2.download_button("⬇ JSON", json.dumps(models, indent=2), "ai_arena.json", "application/json", use_container_width=True)
-    dl3.download_button("⬇ Markdown", df_full.to_markdown(index=False), "ai_arena.md", "text/markdown", use_container_width=True)
+    def df_to_markdown(df):
+        cols = list(df.columns)
+        header = "| " + " | ".join(str(c) for c in cols) + " |"
+        sep    = "| " + " | ".join("---" for _ in cols) + " |"
+        rows   = ["| " + " | ".join(str(v) for v in row) + " |" for row in df.itertuples(index=False)]
+        return "\n".join([header, sep] + rows)
+
+    dl3.download_button("⬇ Markdown", df_to_markdown(df_full), "ai_arena.md", "text/markdown", use_container_width=True)
 
     st.markdown('<p class="section-label" style="margin-top:1.5rem">STATISTICAL SUMMARY</p>', unsafe_allow_html=True)
     st.dataframe(
