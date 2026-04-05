@@ -997,10 +997,38 @@ with tabs[8]:
     } for m in sorted_models])
 
     num_cols = ["Overall","Accuracy","Speed","Reasoning","Creativity","Safety","Cost Eff.","Multilingual","Instruction"]
-    st.dataframe(
-        df_full.style.background_gradient(subset=num_cols, cmap="Blues"),
-        use_container_width=True, hide_index=True, height=420
-    )
+
+    def color_cells(val, col_min, col_max):
+        if not isinstance(val, (int, float)):
+            return ""
+        ratio = (val - col_min) / (col_max - col_min + 1e-9)
+        ratio = max(0.0, min(1.0, ratio))
+        # interpolate from dark purple (#1a1535) → bright purple (#7c6fff)
+        r = int(26  + ratio * (124 - 26))
+        g = int(21  + ratio * (111 - 21))
+        b = int(53  + ratio * (255 - 53))
+        text = "#eeeef8" if ratio > 0.3 else "#8888b0"
+        return f"background-color: rgb({r},{g},{b}); color: {text}; font-weight: 600;"
+
+    styler = df_full.style
+    for col in num_cols:
+        if col in df_full.columns:
+            col_min = df_full[col].min()
+            col_max = df_full[col].max()
+            try:
+                # pandas >= 2.1
+                styler = styler.map(
+                    lambda val, mn=col_min, mx=col_max: color_cells(val, mn, mx),
+                    subset=[col]
+                )
+            except AttributeError:
+                # pandas < 2.1 fallback
+                styler = styler.applymap(
+                    lambda val, mn=col_min, mx=col_max: color_cells(val, mn, mx),
+                    subset=[col]
+                )
+
+    st.dataframe(styler, use_container_width=True, hide_index=True, height=420)
 
     dl1, dl2, dl3 = st.columns(3)
     dl1.download_button("⬇ CSV", df_full.to_csv(index=False), "ai_arena.csv", "text/csv", use_container_width=True)
