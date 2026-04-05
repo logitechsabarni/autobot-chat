@@ -178,7 +178,20 @@ def pd_():
     )
 
 def gs_():
-    return dict(gridcolor="#1f1f38",tickfont=dict(color="#5a5a80",size=10))
+    """Base axis style — no title, no tickfont clash."""
+    return dict(gridcolor="#1f1f38", tickfont=dict(color="#5a5a80", size=10))
+
+def ax_(title="", color="#eeeef8", title_color="#5a5a80", extra=None):
+    """Build a clean axis dict compatible with modern Plotly."""
+    d = dict(
+        gridcolor="#1f1f38",
+        tickfont=dict(color=color, size=10),
+    )
+    if title:
+        d["title"] = dict(text=title, font=dict(color=title_color, size=11))
+    if extra:
+        d.update(extra)
+    return d
 
 def col_(i):
     return PALETTE[i % len(PALETTE)]
@@ -226,8 +239,8 @@ def make_heatmap(ml):
     fig.update_layout(
         **pd_(),
         height=max(250, len(ml)*55+80),
-        xaxis=dict(tickfont=dict(color="#eeeef8", size=10), side="top"),
-        yaxis=dict(tickfont=dict(color="#eeeef8", size=10))
+        xaxis=dict(gridcolor="#1f1f38", tickfont=dict(color="#eeeef8", size=10), side="top"),
+        yaxis=dict(gridcolor="#1f1f38", tickfont=dict(color="#eeeef8", size=10))
     )
     return fig
 
@@ -243,8 +256,8 @@ def make_bar(ml, key, label):
     fig.update_layout(
         **pd_(),
         height=280,
-        yaxis=dict(range=[0,115], **gs_()),
-        xaxis=dict(tickfont=dict(color="#eeeef8", size=10)),
+        yaxis=dict(range=[0,115], gridcolor="#1f1f38", tickfont=dict(color="#5a5a80", size=10)),
+        xaxis=dict(gridcolor="#1f1f38", tickfont=dict(color="#eeeef8", size=10)),
         title=dict(text=label, font=dict(size=12, color="#5a5a80"))
     )
     return fig
@@ -270,8 +283,14 @@ def make_bubble(ml):
         **pd_(),
         height=380,
         showlegend=False,
-        xaxis=dict(title="Input $/1M tokens", **gs_(), titlefont=dict(color="#5a5a80")),
-        yaxis=dict(title="Overall Score", **gs_(), titlefont=dict(color="#5a5a80"))
+        xaxis=dict(
+            title=dict(text="Input $/1M tokens", font=dict(color="#5a5a80", size=11)),
+            gridcolor="#1f1f38", tickfont=dict(color="#5a5a80", size=10)
+        ),
+        yaxis=dict(
+            title=dict(text="Overall Score", font=dict(color="#5a5a80", size=11)),
+            gridcolor="#1f1f38", tickfont=dict(color="#5a5a80", size=10)
+        )
     )
     return fig
 
@@ -297,8 +316,14 @@ def make_timeline(ml):
         **pd_(),
         height=320,
         showlegend=False,
-        xaxis=dict(title="Release Date", **gs_(), titlefont=dict(color="#5a5a80")),
-        yaxis=dict(title="Overall Score", **gs_(), titlefont=dict(color="#5a5a80"))
+        xaxis=dict(
+            title=dict(text="Release Date", font=dict(color="#5a5a80", size=11)),
+            gridcolor="#1f1f38", tickfont=dict(color="#5a5a80", size=10)
+        ),
+        yaxis=dict(
+            title=dict(text="Overall Score", font=dict(color="#5a5a80", size=11)),
+            gridcolor="#1f1f38", tickfont=dict(color="#5a5a80", size=10)
+        )
     )
     return fig
 
@@ -568,8 +593,8 @@ with tabs[0]:
             ))
         fig_b.update_layout(
             barmode="group", **pd_(), height=300,
-            yaxis=dict(range=[0,115], **gs_()),
-            xaxis=dict(tickfont=dict(color="#eeeef8", size=10)),
+            yaxis=dict(range=[0,115], gridcolor="#1f1f38", tickfont=dict(color="#5a5a80", size=10)),
+            xaxis=dict(gridcolor="#1f1f38", tickfont=dict(color="#eeeef8", size=10)),
             legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(color="#eeeef8"))
         )
         st.plotly_chart(fig_b, use_container_width=True, config={"displayModeBar": False})
@@ -656,8 +681,8 @@ with tabs[3]:
     ))
     fig_p.update_layout(
         barmode="group", **pd_(), height=300,
-        yaxis=dict(**gs_()),
-        xaxis=dict(tickfont=dict(color="#eeeef8", size=10)),
+        yaxis=dict(gridcolor="#1f1f38", tickfont=dict(color="#5a5a80", size=10)),
+        xaxis=dict(gridcolor="#1f1f38", tickfont=dict(color="#eeeef8", size=10)),
         legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(color="#eeeef8"))
     )
     st.plotly_chart(fig_p, use_container_width=True, config={"displayModeBar": False})
