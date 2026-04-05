@@ -184,15 +184,17 @@ def make_radar(ml):
     for i,m in enumerate(ml):
         vals=[m.get(d,0) for d in DIMS]+[m.get(DIMS[0],0)]
         c=col_(i)
+        # Convert hex to rgba for fillcolor
+        r=int(c[1:3],16); g=int(c[3:5],16); b=int(c[5:7],16)
+        fill=f"rgba({r},{g},{b},0.13)"
         fig.add_trace(go.Scatterpolar(r=vals,theta=cats,fill='toself',name=m["name"],
-            line=dict(color=c,width=2.5),fillcolor=c+"22"))
+            line=dict(color=c,width=2.5),fillcolor=fill))
     fig.update_layout(polar=dict(bgcolor="rgba(17,17,32,0.7)",
         radialaxis=dict(visible=True,range=[0,100],gridcolor="#1f1f38",tickfont=dict(color="#5a5a80",size=8)),
         angularaxis=dict(gridcolor="#1f1f38",tickfont=dict(color="#eeeef8",size=11))),
         showlegend=True,legend=dict(bgcolor="rgba(12,12,20,.8)",bordercolor="#1f1f38",font=dict(color="#eeeef8",size=11)),
         **pd_(),height=420,margin=dict(l=50,r=50,t=30,b=30))
     return fig
-
 def make_heatmap(ml):
     z=[[m.get(d,0) for d in DIMS] for m in ml]
     y=[m["name"] for m in ml]
